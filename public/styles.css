@@ -255,14 +255,7 @@ input:focus {
 
 .dashboard {
   display: grid;
-  grid-template-columns: minmax(0, 1.25fr) minmax(330px, 0.75fr);
   gap: 18px;
-  align-items: start;
-}
-
-.security-panel,
-.stats-grid {
-  grid-column: 1 / -1;
 }
 
 .security-panel {
@@ -274,6 +267,14 @@ input:focus {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 10px;
+}
+
+.main-grid,
+.lower-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.25fr) minmax(330px, 0.75fr);
+  gap: 18px;
+  align-items: start;
 }
 
 .stat {
@@ -685,7 +686,8 @@ input:focus {
     font-size: 2.25rem;
   }
 
-  .dashboard {
+  .main-grid,
+  .lower-grid {
     grid-template-columns: 1fr;
   }
 

@@ -76,55 +76,59 @@
           </div>
         </section>
 
-        <div class="map-wrap">
-          <div class="map-toolbar">
-            <button id="recenterMapButton" type="button">Recenter</button>
+        <section class="main-grid">
+          <div class="map-wrap">
+            <div class="map-toolbar">
+              <button id="recenterMapButton" type="button">Recenter</button>
+            </div>
+            <div id="map"></div>
           </div>
-          <div id="map"></div>
-        </div>
 
-        <section class="panel">
-          <div class="section-head">
-            <h2>Current Status</h2>
-            <span id="lastRefresh">Waiting</span>
-          </div>
-          <div id="peopleList" class="people-list"></div>
+          <section class="panel">
+            <div class="section-head">
+              <h2>Current Status</h2>
+              <span id="lastRefresh">Waiting</span>
+            </div>
+            <div id="peopleList" class="people-list"></div>
+          </section>
         </section>
 
-        <section class="panel">
-          <div class="section-head">
-            <h2>IC Links</h2>
-            <span>Private check-in pages</span>
-          </div>
-          <div id="linksList" class="links-list"></div>
-        </section>
+        <section class="lower-grid">
+          <section class="panel">
+            <div class="section-head">
+              <h2>IC Links</h2>
+              <span>Private check-in pages</span>
+            </div>
+            <div id="linksList" class="links-list"></div>
+          </section>
 
-        <section class="panel">
-          <div class="section-head">
-            <h2>AED Locations</h2>
-            <span>Shown on the map</span>
-          </div>
-          <form id="aedForm" class="aed-form">
-            <label>
-              Name
-              <input id="aedNameInput" type="text" maxlength="80" placeholder="e.g. Level 1 Lobby AED" required>
-            </label>
-            <label>
-              Latitude
-              <input id="aedLatInput" type="number" step="any" min="-90" max="90" placeholder="1.3521" required>
-            </label>
-            <label>
-              Longitude
-              <input id="aedLngInput" type="number" step="any" min="-180" max="180" placeholder="103.8198" required>
-            </label>
-            <label class="wide-field">
-              Note
-              <input id="aedNoteInput" type="text" maxlength="160" placeholder="e.g. Beside security counter">
-            </label>
-            <button type="submit">Add AED</button>
-          </form>
-          <p id="aedMessage" class="message"></p>
-          <div id="aedList" class="aed-list"></div>
+          <section class="panel">
+            <div class="section-head">
+              <h2>AED Locations</h2>
+              <span>Shown on the map</span>
+            </div>
+            <form id="aedForm" class="aed-form">
+              <label>
+                Name
+                <input id="aedNameInput" type="text" maxlength="80" placeholder="e.g. Level 1 Lobby AED" required>
+              </label>
+              <label>
+                Latitude
+                <input id="aedLatInput" type="number" step="any" min="-90" max="90" placeholder="1.3521" required>
+              </label>
+              <label>
+                Longitude
+                <input id="aedLngInput" type="number" step="any" min="-180" max="180" placeholder="103.8198" required>
+              </label>
+              <label class="wide-field">
+                Note
+                <input id="aedNoteInput" type="text" maxlength="160" placeholder="e.g. Beside security counter">
+              </label>
+              <button type="submit">Add AED</button>
+            </form>
+            <p id="aedMessage" class="message"></p>
+            <div id="aedList" class="aed-list"></div>
+          </section>
         </section>
       </section>
     </main>
