@@ -12,8 +12,8 @@ const TEAM_FILE = path.join(DATA_DIR, "team.json");
 const LOCATIONS_FILE = path.join(DATA_DIR, "locations.json");
 const ADMIN_FILE = path.join(DATA_DIR, "admin.json");
 const PUBLIC_DIR = path.join(__dirname, "public");
-const REDIS_URL = process.env.UPSTASH_REDIS_REST_URL;
-const REDIS_TOKEN = process.env.UPSTASH_REDIS_REST_TOKEN;
+const REDIS_URL = process.env.UPSTASH_REDIS_REST_URL || process.env.KV_REST_API_URL;
+const REDIS_TOKEN = process.env.UPSTASH_REDIS_REST_TOKEN || process.env.KV_REST_API_TOKEN;
 const HAS_REDIS = Boolean(REDIS_URL && REDIS_TOKEN);
 const IS_VERCEL = Boolean(process.env.VERCEL);
 const STORE_PREFIX = process.env.STORE_PREFIX || "ldm-location";
@@ -136,7 +136,7 @@ async function writeStore(name, value) {
     return;
   }
   if (IS_VERCEL) {
-    throw new Error("Persistent storage is not configured. Add UPSTASH_REDIS_REST_URL and UPSTASH_REDIS_REST_TOKEN in Vercel.");
+    throw new Error("Persistent storage is not configured. Add KV_REST_API_URL and KV_REST_API_TOKEN in Vercel.");
   }
 
   const files = {
