@@ -4,6 +4,10 @@ const personName = document.querySelector("#personName");
 const updateButton = document.querySelector("#updateButton");
 const statusMessage = document.querySelector("#statusMessage");
 const noteInput = document.querySelector("#noteInput");
+const liveIntervalMs = 30000;
+let watchId = null;
+let lastSentAt = 0;
+let retryTimer = null;
 
 function setStatus(message, tone = "") {
   statusMessage.textContent = message;
@@ -24,6 +28,77 @@ function getPosition() {
   });
 }
 
+async function sendPosition(position) {
+  const now = Date.now();
+  if (now - lastSentAt < liveIntervalMs - 1000) return;
+  lastSentAt = now;
+  setStatus("Sending live GPS update...");
+  const response = await fetch("/api/location", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({
+      token: icToken,
+      lat: position.coords.latitude,
+      lng: position.coords.longitude,
+      accuracy: position.coords.accuracy,
+      note: noteInput.value
+    })
+  });
+  const data = await response.json();
+  if (!response.ok) throw new Error(data.error || "Could not save location.");
+  setStatus(`Live tracking. Last update ${new Date(data.location.updatedAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}.`, "success");
+}
+
+function stopTracking() {
+  if (watchId !== null) {
+    navigator.geolocation.clearWatch(watchId);
+    watchId = null;
+  }
+  if (retryTimer) {
+    clearInterval(retryTimer);
+    retryTimer = null;
+  }
+}
+
+function startTracking() {
+  stopTracking();
+  if (!navigator.geolocation) {
+    setStatus("GPS is not supported by this browser.", "error");
+    return;
+  }
+  updateButton.disabled = true;
+  setStatus("Starting live GPS tracking...");
+  watchId = navigator.geolocation.watchPosition(
+    async position => {
+      try {
+        updateButton.disabled = false;
+        await sendPosition(position);
+      } catch (error) {
+        setStatus(error.message || "Could not send GPS update.", "error");
+      }
+    },
+    error => {
+      updateButton.disabled = false;
+      setStatus(error.message || "Location permission is required for live tracking.", "error");
+    },
+    {
+      enableHighAccuracy: true,
+      timeout: 20000,
+      maximumAge: 10000
+    }
+  );
+
+  retryTimer = setInterval(async () => {
+    if (Date.now() - lastSentAt < liveIntervalMs) return;
+    try {
+      const position = await getPosition();
+      await sendPosition(position);
+    } catch (error) {
+      setStatus(error.message || "Waiting for GPS permission/location.", "error");
+    }
+  }, liveIntervalMs);
+}
+
 async function loadMe() {
   if (!icToken) {
     personName.textContent = "Invalid Link";
@@ -40,33 +115,13 @@ async function loadMe() {
     return;
   }
   personName.textContent = data.name;
+  startTracking();
 }
 
-updateButton.addEventListener("click", async () => {
-  updateButton.disabled = true;
-  setStatus("Getting your GPS location...");
-  try {
-    const position = await getPosition();
-    setStatus("Sending location...");
-    const response = await fetch("/api/location", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({
-        token: icToken,
-        lat: position.coords.latitude,
-        lng: position.coords.longitude,
-        accuracy: position.coords.accuracy,
-        note: noteInput.value
-      })
-    });
-    const data = await response.json();
-    if (!response.ok) throw new Error(data.error || "Could not save location.");
-    setStatus(`Location updated at ${new Date(data.location.updatedAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}.`, "success");
-  } catch (error) {
-    setStatus(error.message || "Could not update location.", "error");
-  } finally {
-    updateButton.disabled = false;
-  }
+updateButton.addEventListener("click", startTracking);
+
+document.addEventListener("visibilitychange", () => {
+  if (!document.hidden && icToken) startTracking();
 });
 
 loadMe();

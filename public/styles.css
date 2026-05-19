@@ -463,6 +463,11 @@ input:focus {
   border-color: var(--warn-line);
 }
 
+.person-row.live {
+  border-color: rgba(8, 116, 67, 0.28);
+  background: var(--ok-soft);
+}
+
 .person-row.stale strong::before {
   background: var(--danger);
   box-shadow: 0 0 0 4px var(--danger-soft);

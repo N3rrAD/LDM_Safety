@@ -35,6 +35,7 @@ let knownUpdates = new Map();
 let latestBounds = [];
 let mapHasAutoFit = false;
 const staleMinutes = 30;
+const liveMinutes = 2;
 
 function token() {
   return sessionStorage.getItem("adminToken") || "";
@@ -85,6 +86,11 @@ function escapeHtml(value) {
 function isStale(location) {
   if (!location) return true;
   return Date.now() - new Date(location.updatedAt).getTime() > staleMinutes * 60 * 1000;
+}
+
+function isLive(location) {
+  if (!location) return false;
+  return Date.now() - new Date(location.updatedAt).getTime() <= liveMinutes * 60 * 1000;
 }
 
 function sendUpdateAlert(person) {
@@ -151,6 +157,7 @@ function renderPeople(people) {
   people.forEach(person => {
     const location = person.location;
     const stale = isStale(location);
+    const live = isLive(location);
     const previousUpdate = knownUpdates.get(person.id);
     if (!firstLocationLoad && location && knownUpdates.has(person.id) && previousUpdate !== location.updatedAt) {
       sendUpdateAlert(person);
@@ -158,11 +165,11 @@ function renderPeople(people) {
     knownUpdates.set(person.id, location?.updatedAt || null);
 
     const row = document.createElement("article");
-    row.className = stale ? "person-row stale" : "person-row";
+    row.className = stale ? "person-row stale" : live ? "person-row live" : "person-row";
     row.innerHTML = `
       <div>
         <strong>${escapeHtml(person.name)}</strong>
-        <span>${location ? `Updated ${timeAgo(location.updatedAt)}` : "No location yet"}</span>
+        <span>${location ? `${live ? "Live" : "Updated"} ${timeAgo(location.updatedAt)}` : "No location yet"}</span>
         ${stale ? `<em>${location ? `Over ${staleMinutes}m old` : "Needs check-in"}</em>` : ""}
         ${location?.note ? `<small>${escapeHtml(location.note)}</small>` : ""}
       </div>
