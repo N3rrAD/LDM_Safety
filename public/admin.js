@@ -16,11 +16,14 @@ const passwordMessage = document.querySelector("#passwordMessage");
 const updatedCount = document.querySelector("#updatedCount");
 const staleCount = document.querySelector("#staleCount");
 const totalCount = document.querySelector("#totalCount");
+const recenterMapButton = document.querySelector("#recenterMapButton");
 
 let map;
 let markers = new Map();
 let firstLocationLoad = true;
 let knownUpdates = new Map();
+let latestBounds = [];
+let mapHasAutoFit = false;
 const staleMinutes = 30;
 
 function token() {
@@ -96,6 +99,11 @@ function ensureMap() {
   }).addTo(map);
 }
 
+function fitMapToLatestLocations() {
+  if (!map || !latestBounds.length) return;
+  map.fitBounds(latestBounds, { padding: [36, 36], maxZoom: 16 });
+}
+
 function renderPeople(people) {
   peopleList.innerHTML = "";
   const bounds = [];
@@ -147,8 +155,10 @@ function renderPeople(people) {
     }
   });
 
-  if (bounds.length) {
-    map.fitBounds(bounds, { padding: [36, 36], maxZoom: 16 });
+  latestBounds = bounds;
+  if (bounds.length && !mapHasAutoFit) {
+    fitMapToLatestLocations();
+    mapHasAutoFit = true;
   }
   firstLocationLoad = false;
 }
@@ -249,6 +259,7 @@ passwordForm.addEventListener("submit", async event => {
 });
 
 refreshButton.addEventListener("click", loadLocations);
+recenterMapButton.addEventListener("click", fitMapToLatestLocations);
 
 linksList.addEventListener("click", async event => {
   const button = event.target.closest(".copy-link");
