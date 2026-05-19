@@ -1,0 +1,4 @@
+data/
+.admin-password.local.txt
+.env*.local
+node_modules/
