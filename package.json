@@ -1,0 +1,13 @@
+{
+  "name": "team-location-dashboard",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Small GPS check-in website for team ICs and an admin location dashboard.",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

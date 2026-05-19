@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>IC GPS Check-In</title>
+    <link rel="stylesheet" href="/styles.css">
+  </head>
+  <body>
+    <main class="checkin-shell">
+      <section class="checkin-card">
+        <div class="checkin-mark">GPS</div>
+        <p class="eyebrow">GPS check-in</p>
+        <h1 id="personName">Loading...</h1>
+        <p class="helper">Tap once to send your current location to the admin dashboard.</p>
+
+        <label class="note-field">
+          Optional note
+          <input id="noteInput" type="text" maxlength="120" placeholder="e.g. Site A, moving to HQ">
+        </label>
+
+        <button id="updateButton" class="primary-action">Update My Location</button>
+        <p id="statusMessage" class="message"></p>
+        <p class="fineprint">Your browser will ask for location permission. The page sends only the latest GPS point when you press the button.</p>
+      </section>
+    </main>
+
+    <script src="/ic.js"></script>
+  </body>
+</html>

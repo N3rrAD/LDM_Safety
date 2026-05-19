@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>IC Location Admin</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+    <link rel="stylesheet" href="/styles.css">
+  </head>
+  <body>
+    <main class="shell">
+      <section class="topbar">
+        <div>
+          <p class="eyebrow">Admin dashboard</p>
+          <h1>Team IC Locations</h1>
+          <p class="subtitle">Live GPS check-ins, stale alerts, and private IC links in one place.</p>
+        </div>
+        <div class="top-actions">
+          <button id="notifyButton" class="icon-button" title="Enable update alerts" aria-label="Enable update alerts">Alert</button>
+          <button id="refreshButton" class="icon-button" title="Refresh locations" aria-label="Refresh locations">Refresh</button>
+        </div>
+      </section>
+
+      <section id="loginPanel" class="panel compact">
+        <h2>Admin Access</h2>
+        <form id="loginForm" class="login-form">
+          <label>
+            Password
+            <input id="passwordInput" type="password" autocomplete="current-password" required>
+          </label>
+          <button type="submit">Sign in</button>
+        </form>
+        <p id="loginMessage" class="message"></p>
+      </section>
+
+      <section id="dashboard" class="dashboard hidden">
+        <section id="securityPanel" class="panel security-panel hidden">
+          <div>
+            <h2>Change Admin Password</h2>
+            <p class="helper">Set a stronger password before using this with real team locations.</p>
+          </div>
+          <form id="passwordForm" class="password-form">
+            <label>
+              Current
+              <input id="currentPasswordInput" type="password" autocomplete="current-password" required>
+            </label>
+            <label>
+              New
+              <input id="newPasswordInput" type="password" autocomplete="new-password" minlength="10" required>
+            </label>
+            <button type="submit">Update password</button>
+          </form>
+          <p id="passwordMessage" class="message"></p>
+        </section>
+
+        <section class="stats-grid" aria-label="Location summary">
+          <div class="stat">
+            <span>Updated</span>
+            <strong id="updatedCount">0</strong>
+          </div>
+          <div class="stat warning">
+            <span>Stale</span>
+            <strong id="staleCount">0</strong>
+          </div>
+          <div class="stat">
+            <span>Total</span>
+            <strong id="totalCount">10</strong>
+          </div>
+        </section>
+
+        <div class="map-wrap">
+          <div id="map"></div>
+        </div>
+
+        <section class="panel">
+          <div class="section-head">
+            <h2>Current Status</h2>
+            <span id="lastRefresh">Waiting</span>
+          </div>
+          <div id="peopleList" class="people-list"></div>
+        </section>
+
+        <section class="panel">
+          <div class="section-head">
+            <h2>IC Links</h2>
+            <span>Private check-in pages</span>
+          </div>
+          <div id="linksList" class="links-list"></div>
+        </section>
+      </section>
+    </main>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="/admin.js"></script>
+  </body>
+</html>
