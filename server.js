@@ -199,7 +199,7 @@ function parseBody(req) {
     let raw = "";
     req.on("data", chunk => {
       raw += chunk;
-      if (raw.length > 1_000_000) {
+      if (raw.length > 10_000_000) {
         req.destroy();
         reject(new Error("Request body too large"));
       }
@@ -356,6 +356,35 @@ async function handleApi(req, res, pathname) {
     aeds.push(record);
     await writeStore("aeds", aeds);
     sendJson(res, 200, { ok: true, aed: record });
+    return;
+  }
+
+  if (req.method === "POST" && pathname === "/api/aeds/bulk") {
+    if (!(await isAdmin(req))) {
+      sendJson(res, 401, { error: "Admin login required" });
+      return;
+    }
+    const body = await parseBody(req);
+    const inputAeds = Array.isArray(body.aeds) ? body.aeds : [];
+    if (inputAeds.length > 20000) {
+      sendJson(res, 400, { error: "Too many AED records" });
+      return;
+    }
+    const aeds = inputAeds.map((aed, index) => {
+      const lat = Number(aed.lat);
+      const lng = Number(aed.lng);
+      if (!isValidCoordinate(lat, lng)) return null;
+      return {
+        id: String(aed.id || crypto.createHash("sha1").update(`${aed.name || "AED"}|${lat}|${lng}|${index}`).digest("hex").slice(0, 18)),
+        name: String(aed.name || "AED").trim().slice(0, 80) || "AED",
+        lat,
+        lng,
+        note: String(aed.note || "").trim().slice(0, 160),
+        updatedAt: new Date().toISOString()
+      };
+    }).filter(Boolean);
+    await writeStore("aeds", aeds);
+    sendJson(res, 200, { ok: true, count: aeds.length, skipped: inputAeds.length - aeds.length });
     return;
   }
 

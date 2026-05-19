@@ -555,6 +555,10 @@ input:focus {
   min-height: 58px;
 }
 
+.aed-row.muted-row {
+  background: rgba(255, 255, 255, 0.54);
+}
+
 .aed-row .row-actions {
   display: flex;
   align-items: center;

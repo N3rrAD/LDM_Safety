@@ -29,6 +29,7 @@ const aedList = document.querySelector("#aedList");
 let map;
 let markers = new Map();
 let aedMarkers = new Map();
+let aedLayer;
 let firstLocationLoad = true;
 let knownUpdates = new Map();
 let latestBounds = [];
@@ -116,6 +117,10 @@ function ensureMap() {
   L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
     attribution: "&copy; OpenStreetMap contributors"
   }).addTo(map);
+  aedLayer = L.markerClusterGroup
+    ? L.markerClusterGroup({ chunkedLoading: true, maxClusterRadius: 48 })
+    : L.layerGroup();
+  aedLayer.addTo(map);
 }
 
 function fitMapToLatestLocations() {
@@ -192,7 +197,7 @@ function renderAeds(aeds) {
 
   for (const [id, marker] of aedMarkers.entries()) {
     if (!activeIds.has(id)) {
-      marker.remove();
+      aedLayer.removeLayer(marker);
       aedMarkers.delete(id);
     }
   }
@@ -208,9 +213,13 @@ function renderAeds(aeds) {
     if (aedMarkers.has(aed.id)) {
       aedMarkers.get(aed.id).setLatLng(latLng).setPopupContent(popup);
     } else {
-      aedMarkers.set(aed.id, L.marker(latLng, { icon: aedIcon() }).addTo(map).bindPopup(popup));
+      const marker = L.marker(latLng, { icon: aedIcon() }).bindPopup(popup);
+      aedMarkers.set(aed.id, marker);
+      aedLayer.addLayer(marker);
     }
+  });
 
+  aeds.slice(0, 100).forEach(aed => {
     const row = document.createElement("article");
     row.className = "aed-row";
     row.innerHTML = `
@@ -225,6 +234,13 @@ function renderAeds(aeds) {
     `;
     aedList.appendChild(row);
   });
+
+  if (aeds.length > 100) {
+    const row = document.createElement("article");
+    row.className = "aed-row muted-row";
+    row.innerHTML = `<div><strong>${aeds.length - 100} more AEDs</strong><span>All AEDs are still shown as map pins/clusters.</span></div>`;
+    aedList.appendChild(row);
+  }
 }
 
 async function loadLocations() {
