@@ -77,8 +77,8 @@ async function main() {
   const unresolved = [];
   const pendingPostals = uniquePostals.filter(postal => !geocoded.has(postal));
 
-  for (let start = 0; start < pendingPostals.length; start += 10) {
-    const batch = pendingPostals.slice(start, start + 10);
+  for (let start = 0; start < pendingPostals.length; start += 1) {
+    const batch = pendingPostals.slice(start, start + 1);
     await Promise.all(batch.map(async postal => {
       try {
         const location = await geocodePostal(postal);
@@ -97,6 +97,7 @@ async function main() {
       await fs.writeFile(cachePath, `${JSON.stringify(cache, null, 2)}\n`);
       console.log(`Geocoded ${Math.min(start + batch.length, pendingPostals.length)}/${pendingPostals.length} pending postal codes`);
     }
+    await new Promise(resolve => setTimeout(resolve, 35));
   }
 
   const aeds = rows
