@@ -65,41 +65,41 @@ a {
 }
 
 .topbar {
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
-  justify-content: space-between;
-  gap: 16px;
+  gap: 28px;
   margin-bottom: 18px;
 }
 
 .hero-panel {
   position: relative;
   overflow: hidden;
-  min-height: 230px;
+  min-height: 260px;
   border: 1px solid rgba(255, 255, 255, 0.72);
   border-radius: 8px;
   background:
     linear-gradient(135deg, rgba(12, 79, 74, 0.94), rgba(49, 87, 201, 0.78)),
     linear-gradient(180deg, #0c4f4a, #18212b);
   color: white;
-  padding: 30px;
+  padding: 34px;
   box-shadow: var(--shadow);
 }
 
-.hero-panel::after {
-  content: "";
+.hero-visual {
   position: absolute;
-  right: 30px;
-  bottom: 28px;
-  width: min(330px, 40%);
-  height: 128px;
+  top: 50%;
+  right: 34px;
+  width: min(360px, 34%);
+  height: 144px;
+  transform: translateY(-50%);
   border: 1px solid rgba(255, 255, 255, 0.22);
   border-radius: 8px;
   background:
     linear-gradient(90deg, transparent 31px, rgba(255, 255, 255, 0.14) 32px),
     linear-gradient(0deg, transparent 31px, rgba(255, 255, 255, 0.14) 32px);
   background-size: 32px 32px;
-  opacity: 0.72;
+  opacity: 0.48;
 }
 
 .hero-copy,
@@ -108,10 +108,16 @@ a {
   z-index: 1;
 }
 
+.hero-visual {
+  z-index: 0;
+}
+
 .top-actions {
   display: flex;
   gap: 8px;
   flex: 0 0 auto;
+  justify-self: end;
+  align-self: center;
 }
 
 .brand-lockup {
@@ -167,7 +173,7 @@ h1 {
 
 .hero-panel h1 {
   max-width: 620px;
-  font-size: clamp(2.3rem, 5vw, 4.4rem);
+  font-size: clamp(2.55rem, 5vw, 4.7rem);
 }
 
 h2 {
@@ -580,11 +586,11 @@ input:focus {
   }
 
   .hero-panel {
-    min-height: 210px;
+    min-height: auto;
     padding: 22px;
   }
 
-  .hero-panel::after {
+  .hero-visual {
     display: none;
   }
 
@@ -606,7 +612,13 @@ input:focus {
   }
 
   .topbar {
+    grid-template-columns: 1fr;
     align-items: flex-start;
+    gap: 18px;
+  }
+
+  .top-actions {
+    justify-self: start;
   }
 
   .stats-grid {
@@ -641,10 +653,6 @@ input:focus {
 }
 
 @media (max-width: 520px) {
-  .topbar {
-    flex-direction: column;
-  }
-
   .top-actions {
     width: 100%;
   }
