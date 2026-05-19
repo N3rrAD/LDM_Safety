@@ -17,9 +17,18 @@ const updatedCount = document.querySelector("#updatedCount");
 const staleCount = document.querySelector("#staleCount");
 const totalCount = document.querySelector("#totalCount");
 const recenterMapButton = document.querySelector("#recenterMapButton");
+const aedCount = document.querySelector("#aedCount");
+const aedForm = document.querySelector("#aedForm");
+const aedNameInput = document.querySelector("#aedNameInput");
+const aedLatInput = document.querySelector("#aedLatInput");
+const aedLngInput = document.querySelector("#aedLngInput");
+const aedNoteInput = document.querySelector("#aedNoteInput");
+const aedMessage = document.querySelector("#aedMessage");
+const aedList = document.querySelector("#aedList");
 
 let map;
 let markers = new Map();
+let aedMarkers = new Map();
 let firstLocationLoad = true;
 let knownUpdates = new Map();
 let latestBounds = [];
@@ -47,6 +56,16 @@ function timeAgo(iso) {
 
 function mapsLink(location) {
   return `https://www.google.com/maps?q=${location.lat},${location.lng}`;
+}
+
+function aedIcon() {
+  return L.divIcon({
+    className: "aed-marker",
+    html: "AED",
+    iconSize: [42, 28],
+    iconAnchor: [21, 28],
+    popupAnchor: [0, -28]
+  });
 }
 
 function displayUrl(value) {
@@ -104,9 +123,19 @@ function fitMapToLatestLocations() {
   map.fitBounds(latestBounds, { padding: [36, 36], maxZoom: 16 });
 }
 
+function updateLatestBounds(people = [], aeds = []) {
+  latestBounds = [
+    ...people.filter(person => person.location).map(person => [person.location.lat, person.location.lng]),
+    ...aeds.map(aed => [aed.lat, aed.lng])
+  ];
+  if (latestBounds.length && !mapHasAutoFit) {
+    fitMapToLatestLocations();
+    mapHasAutoFit = true;
+  }
+}
+
 function renderPeople(people) {
   peopleList.innerHTML = "";
-  const bounds = [];
   const stalePeople = people.filter(person => isStale(person.location));
   const updatedPeople = people.length - stalePeople.length;
 
@@ -140,7 +169,6 @@ function renderPeople(people) {
 
     if (!location) return;
     const latLng = [location.lat, location.lng];
-    bounds.push(latLng);
     const popup = `
       <strong>${escapeHtml(person.name)}</strong><br>
       Updated ${timeAgo(location.updatedAt)}<br>
@@ -154,26 +182,68 @@ function renderPeople(people) {
       markers.set(person.id, L.marker(latLng).addTo(map).bindPopup(popup));
     }
   });
-
-  latestBounds = bounds;
-  if (bounds.length && !mapHasAutoFit) {
-    fitMapToLatestLocations();
-    mapHasAutoFit = true;
-  }
   firstLocationLoad = false;
+}
+
+function renderAeds(aeds) {
+  aedCount.textContent = String(aeds.length);
+  aedList.innerHTML = "";
+  const activeIds = new Set(aeds.map(aed => aed.id));
+
+  for (const [id, marker] of aedMarkers.entries()) {
+    if (!activeIds.has(id)) {
+      marker.remove();
+      aedMarkers.delete(id);
+    }
+  }
+
+  aeds.forEach(aed => {
+    const popup = `
+      <strong>${escapeHtml(aed.name)}</strong><br>
+      AED location<br>
+      ${aed.note ? `${escapeHtml(aed.note)}<br>` : ""}
+      <a href="${mapsLink(aed)}" target="_blank" rel="noreferrer">Open in Google Maps</a>
+    `;
+    const latLng = [aed.lat, aed.lng];
+    if (aedMarkers.has(aed.id)) {
+      aedMarkers.get(aed.id).setLatLng(latLng).setPopupContent(popup);
+    } else {
+      aedMarkers.set(aed.id, L.marker(latLng, { icon: aedIcon() }).addTo(map).bindPopup(popup));
+    }
+
+    const row = document.createElement("article");
+    row.className = "aed-row";
+    row.innerHTML = `
+      <div>
+        <strong>${escapeHtml(aed.name)}</strong>
+        <span>${escapeHtml(aed.note || `${aed.lat.toFixed(5)}, ${aed.lng.toFixed(5)}`)}</span>
+      </div>
+      <div class="row-actions">
+        <a href="${mapsLink(aed)}" target="_blank" rel="noreferrer">Map</a>
+        <button type="button" data-aed-id="${escapeHtml(aed.id)}">Delete</button>
+      </div>
+    `;
+    aedList.appendChild(row);
+  });
 }
 
 async function loadLocations() {
   ensureMap();
-  const response = await fetch("/api/locations", { headers: authHeaders() });
-  if (response.status === 401) {
+  const [locationsResponse, aedsResponse] = await Promise.all([
+    fetch("/api/locations", { headers: authHeaders() }),
+    fetch("/api/aeds", { headers: authHeaders() })
+  ]);
+  if (locationsResponse.status === 401 || aedsResponse.status === 401) {
     sessionStorage.removeItem("adminToken");
     loginPanel.classList.remove("hidden");
     dashboard.classList.add("hidden");
     return;
   }
-  const data = await response.json();
+  const data = await locationsResponse.json();
+  const aedData = await aedsResponse.json();
   renderPeople(data.people);
+  renderAeds(aedData.aeds || []);
+  updateLatestBounds(data.people, aedData.aeds || []);
   lastRefresh.textContent = `Refreshed ${new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`;
 }
 
@@ -273,6 +343,44 @@ linksList.addEventListener("click", async event => {
   setTimeout(() => {
     button.textContent = "Copy";
   }, 1200);
+});
+
+aedForm.addEventListener("submit", async event => {
+  event.preventDefault();
+  aedMessage.textContent = "Adding AED...";
+  aedMessage.className = "message";
+  const response = await fetch("/api/aeds", {
+    method: "POST",
+    headers: { "content-type": "application/json", ...authHeaders() },
+    body: JSON.stringify({
+      name: aedNameInput.value,
+      lat: aedLatInput.value,
+      lng: aedLngInput.value,
+      note: aedNoteInput.value
+    })
+  });
+  const data = await response.json();
+  if (!response.ok) {
+    aedMessage.textContent = data.error || "Could not add AED";
+    aedMessage.className = "message error";
+    return;
+  }
+  aedForm.reset();
+  aedMessage.textContent = "AED added.";
+  aedMessage.className = "message success";
+  await loadLocations();
+});
+
+aedList.addEventListener("click", async event => {
+  const button = event.target.closest("[data-aed-id]");
+  if (!button) return;
+  const response = await fetch(`/api/aeds?id=${encodeURIComponent(button.dataset.aedId)}`, {
+    method: "DELETE",
+    headers: authHeaders()
+  });
+  if (response.ok) {
+    await loadLocations();
+  }
 });
 
 notifyButton.addEventListener("click", async () => {

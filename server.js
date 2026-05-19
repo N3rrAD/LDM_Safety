@@ -11,6 +11,7 @@ const DATA_DIR = path.join(__dirname, "data");
 const TEAM_FILE = path.join(DATA_DIR, "team.json");
 const LOCATIONS_FILE = path.join(DATA_DIR, "locations.json");
 const ADMIN_FILE = path.join(DATA_DIR, "admin.json");
+const AED_FILE = path.join(DATA_DIR, "aeds.json");
 const PUBLIC_DIR = path.join(__dirname, "public");
 const REDIS_URL = process.env.UPSTASH_REDIS_REST_URL || process.env.KV_REST_API_URL;
 const REDIS_TOKEN = process.env.UPSTASH_REDIS_REST_TOKEN || process.env.KV_REST_API_TOKEN;
@@ -20,7 +21,8 @@ const STORE_PREFIX = process.env.STORE_PREFIX || "ldm-location";
 const STORE_KEYS = {
   team: `${STORE_PREFIX}:team`,
   locations: `${STORE_PREFIX}:locations`,
-  admin: `${STORE_PREFIX}:admin`
+  admin: `${STORE_PREFIX}:admin`,
+  aeds: `${STORE_PREFIX}:aeds`
 };
 
 const adminSessions = new Map();
@@ -73,6 +75,11 @@ async function ensureDataFiles() {
   } catch {
     await writeJson(ADMIN_FILE, createPasswordRecord(ADMIN_PASSWORD, ADMIN_PASSWORD === "change-me"));
   }
+  try {
+    await fs.access(AED_FILE);
+  } catch {
+    await writeJson(AED_FILE, []);
+  }
 }
 
 async function ensureRemoteData() {
@@ -84,6 +91,9 @@ async function ensureRemoteData() {
   }
   if (!(await readStore("admin", null))) {
     await writeStore("admin", createPasswordRecord(ADMIN_PASSWORD, ADMIN_PASSWORD === "change-me"));
+  }
+  if (!(await readStore("aeds", null))) {
+    await writeStore("aeds", await readJson(AED_FILE, []));
   }
 }
 
@@ -125,7 +135,8 @@ async function readStore(name, fallback) {
   const files = {
     team: TEAM_FILE,
     locations: LOCATIONS_FILE,
-    admin: ADMIN_FILE
+    admin: ADMIN_FILE,
+    aeds: AED_FILE
   };
   return readJson(files[name], fallback);
 }
@@ -142,7 +153,8 @@ async function writeStore(name, value) {
   const files = {
     team: TEAM_FILE,
     locations: LOCATIONS_FILE,
-    admin: ADMIN_FILE
+    admin: ADMIN_FILE,
+    aeds: AED_FILE
   };
   await writeJson(files[name], value);
 }
@@ -308,6 +320,60 @@ async function handleApi(req, res, pathname) {
         url: `/ic.html?t=${encodeURIComponent(member.token)}`
       }))
     });
+    return;
+  }
+
+  if (req.method === "GET" && pathname === "/api/aeds") {
+    if (!(await isAdmin(req))) {
+      sendJson(res, 401, { error: "Admin login required" });
+      return;
+    }
+    sendJson(res, 200, { aeds: await readStore("aeds", []) });
+    return;
+  }
+
+  if (req.method === "POST" && pathname === "/api/aeds") {
+    if (!(await isAdmin(req))) {
+      sendJson(res, 401, { error: "Admin login required" });
+      return;
+    }
+    const body = await parseBody(req);
+    const lat = Number(body.lat);
+    const lng = Number(body.lng);
+    if (!isValidCoordinate(lat, lng)) {
+      sendJson(res, 400, { error: "Invalid AED coordinates" });
+      return;
+    }
+    const aeds = await readStore("aeds", []);
+    const record = {
+      id: crypto.randomBytes(9).toString("hex"),
+      name: String(body.name || "AED").trim().slice(0, 80) || "AED",
+      lat,
+      lng,
+      note: String(body.note || "").trim().slice(0, 160),
+      updatedAt: new Date().toISOString()
+    };
+    aeds.push(record);
+    await writeStore("aeds", aeds);
+    sendJson(res, 200, { ok: true, aed: record });
+    return;
+  }
+
+  if (req.method === "DELETE" && pathname === "/api/aeds") {
+    if (!(await isAdmin(req))) {
+      sendJson(res, 401, { error: "Admin login required" });
+      return;
+    }
+    const url = new URL(req.url, `http://${req.headers.host}`);
+    const id = url.searchParams.get("id");
+    const aeds = await readStore("aeds", []);
+    const nextAeds = aeds.filter(aed => aed.id !== id);
+    if (nextAeds.length === aeds.length) {
+      sendJson(res, 404, { error: "AED not found" });
+      return;
+    }
+    await writeStore("aeds", nextAeds);
+    sendJson(res, 200, { ok: true });
     return;
   }
 
