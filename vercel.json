@@ -3,16 +3,11 @@
   "rewrites": [
     {
       "source": "/api/(.*)",
-      "destination": "/server.js"
+      "destination": "/api/index.js"
     },
     {
       "source": "/",
       "destination": "/admin.html"
     }
-  ],
-  "functions": {
-    "server.js": {
-      "runtime": "nodejs20.x"
-    }
-  }
+  ]
 }
