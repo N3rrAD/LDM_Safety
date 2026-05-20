@@ -227,6 +227,16 @@ function isValidCoordinate(lat, lng) {
   return Number.isFinite(lat) && Number.isFinite(lng) && lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180;
 }
 
+function distanceMeters(fromLat, fromLng, toLat, toLng) {
+  const radius = 6371000;
+  const lat1 = fromLat * Math.PI / 180;
+  const lat2 = toLat * Math.PI / 180;
+  const deltaLat = (toLat - fromLat) * Math.PI / 180;
+  const deltaLng = (toLng - fromLng) * Math.PI / 180;
+  const a = Math.sin(deltaLat / 2) ** 2 + Math.cos(lat1) * Math.cos(lat2) * Math.sin(deltaLng / 2) ** 2;
+  return 2 * radius * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
 function getBearerToken(req) {
   const header = req.headers.authorization || "";
   return header.startsWith("Bearer ") ? header.slice(7) : "";
@@ -329,6 +339,35 @@ async function handleApi(req, res, pathname) {
       return;
     }
     sendJson(res, 200, { aeds: await readStore("aeds", []) });
+    return;
+  }
+
+  if (req.method === "GET" && pathname === "/api/aeds/nearest") {
+    const url = new URL(req.url, `http://${req.headers.host}`);
+    const member = await getTeamMemberByToken(url.searchParams.get("token"));
+    if (!member) {
+      sendJson(res, 401, { error: "Invalid IC link" });
+      return;
+    }
+    const lat = Number(url.searchParams.get("lat"));
+    const lng = Number(url.searchParams.get("lng"));
+    if (!isValidCoordinate(lat, lng)) {
+      sendJson(res, 400, { error: "Invalid GPS coordinates" });
+      return;
+    }
+    const aeds = await readStore("aeds", []);
+    const nearest = aeds
+      .map(aed => ({
+        id: aed.id,
+        name: aed.name,
+        lat: aed.lat,
+        lng: aed.lng,
+        note: aed.note || "",
+        distanceMeters: Math.round(distanceMeters(lat, lng, aed.lat, aed.lng))
+      }))
+      .sort((left, right) => left.distanceMeters - right.distanceMeters)
+      .slice(0, 10);
+    sendJson(res, 200, { nearest });
     return;
   }
 

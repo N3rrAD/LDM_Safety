@@ -611,7 +611,9 @@ input:focus {
 
 .checkin-shell {
   display: grid;
-  place-items: center;
+  align-content: center;
+  justify-items: center;
+  gap: 18px;
   min-height: 100vh;
   padding: 20px;
   background:
@@ -670,6 +672,58 @@ input:focus {
   color: var(--muted);
   font-size: 0.83rem;
   line-height: 1.45;
+}
+
+.aed-nearest-card {
+  display: grid;
+  gap: 14px;
+}
+
+.directions-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+}
+
+.ic-map-wrap {
+  min-height: 280px;
+  border: 1px solid rgba(24, 33, 43, 0.08);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+#icAedMap {
+  min-height: 280px;
+}
+
+.nearby-aed-list {
+  display: grid;
+  gap: 8px;
+}
+
+.nearby-aed-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  border: 1px solid rgba(249, 115, 22, 0.18);
+  border-radius: 8px;
+  background: var(--aed-soft);
+  padding: 10px 12px;
+}
+
+.nearby-aed-row span {
+  display: block;
+  margin-top: 3px;
+  color: var(--muted);
+  font-size: 0.84rem;
+}
+
+.nearby-aed-row a {
+  flex: 0 0 auto;
+  color: var(--aed);
+  font-weight: 900;
 }
 
 @media (max-width: 860px) {
@@ -766,6 +820,11 @@ input:focus {
   .map-wrap,
   #map {
     min-height: 320px;
+  }
+
+  .ic-map-wrap,
+  #icAedMap {
+    min-height: 240px;
   }
 
   .person-row,

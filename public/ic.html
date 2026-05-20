@@ -4,6 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>IC GPS Check-In</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
     <link rel="stylesheet" href="/styles.css">
   </head>
   <body>
@@ -25,8 +26,25 @@
         <p id="statusMessage" class="message"></p>
         <p class="fineprint">Your browser will ask for location permission. GPS updates continue only while this page stays open.</p>
       </section>
+
+      <section id="nearestAedCard" class="checkin-card aed-nearest-card hidden">
+        <div class="section-head">
+          <div>
+            <p class="eyebrow">Nearest AED</p>
+            <h2 id="nearestAedName">Waiting for GPS</h2>
+          </div>
+          <span id="nearestAedDistance">--</span>
+        </div>
+        <p id="nearestAedNote" class="helper">Your nearest AED will appear here after GPS is available.</p>
+        <a id="nearestAedDirections" class="primary-action directions-link" href="#" target="_blank" rel="noreferrer">Get Directions</a>
+        <div class="ic-map-wrap">
+          <div id="icAedMap"></div>
+        </div>
+        <div id="nearbyAedList" class="nearby-aed-list"></div>
+      </section>
     </main>
 
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="/ic.js"></script>
   </body>
 </html>
