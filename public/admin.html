@@ -78,38 +78,40 @@
           </div>
         </section>
 
-        <section class="lower-grid game-ops-grid">
-          <section class="panel game-state-panel">
-            <div class="section-head">
-              <h2>Game Map Mode</h2>
-              <span id="gameStateUpdated">Manual Cat 1 switch</span>
-            </div>
-            <form id="gameStateForm" class="game-state-form">
-              <label class="toggle-row">
-                <input id="cat1Toggle" type="checkbox">
-                <span>Cat 1 active</span>
-              </label>
-              <label>
-                Normal map KML URL
-                <input id="normalMapInput" type="text" placeholder="/maps/game-map.kml">
-              </label>
-              <label>
-                Cat 1 map KML URL
-                <input id="cat1MapInput" type="text" placeholder="/maps/cat1-map.kml">
-              </label>
-              <button type="submit">Save Game Map</button>
-            </form>
-            <p id="gameStateMessage" class="message"></p>
-          </section>
+        <section class="panel game-ops-panel">
+          <div class="section-head">
+            <h2>Game Master Operations</h2>
+            <span id="gameStateUpdated">Manual Cat 1 switch</span>
+          </div>
+          <div class="game-ops-grid">
+            <section class="game-state-panel">
+              <form id="gameStateForm" class="game-state-form">
+                <label class="toggle-row">
+                  <input id="cat1Toggle" type="checkbox">
+                  <span>Cat 1 active</span>
+                </label>
+                <label>
+                  Normal map KML URL
+                  <input id="normalMapInput" type="text" placeholder="/maps/game-map.kml">
+                </label>
+                <label>
+                  Cat 1 map KML URL
+                  <input id="cat1MapInput" type="text" placeholder="/maps/cat1-map.kml">
+                </label>
+                <button type="submit">Save Game Map</button>
+              </form>
+              <p id="gameStateMessage" class="message"></p>
+            </section>
 
-          <section class="panel game-master-panel">
-            <div class="section-head">
-              <h2>Game Masters</h2>
-              <span>Phone links and live status</span>
-            </div>
-            <div id="gameMasterList" class="people-list"></div>
-            <div id="gameMasterLinksList" class="links-list compact-links"></div>
-          </section>
+            <section class="game-master-panel">
+              <div class="section-head compact-head">
+                <h2>Game Masters</h2>
+                <span>Phone links and live status</span>
+              </div>
+              <div id="gameMasterList" class="people-list"></div>
+              <div id="gameMasterLinksList" class="links-list compact-links"></div>
+            </section>
+          </div>
         </section>
 
         <section class="main-grid">
