@@ -4,6 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Game Master Map</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
     <link rel="stylesheet" href="/styles.css">
   </head>
   <body>
@@ -24,13 +25,14 @@
           </div>
           <span id="mapUpdated">Waiting</span>
         </div>
-        <a id="mapLink" class="gm-map-link" href="#" target="_blank" rel="noreferrer">
-          <img id="gameMapImage" alt="Active game map" class="hidden">
+        <div class="gm-map-link">
+          <div id="gmGameMap"></div>
           <div id="mapPlaceholder" class="map-placeholder">
             <strong>Game Map</strong>
             <span>The active map will appear here.</span>
           </div>
-        </a>
+        </div>
+        <a id="mapLink" class="gm-open-map" href="#" target="_blank" rel="noreferrer">Open KML</a>
       </section>
 
       <section class="checkin-card gm-tracking-card">
@@ -45,6 +47,8 @@
       </section>
     </main>
 
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/leaflet-omnivore@0.3.4/leaflet-omnivore.min.js"></script>
     <script src="/gm.js"></script>
   </body>
 </html>

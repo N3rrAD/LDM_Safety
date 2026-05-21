@@ -740,12 +740,23 @@ input:focus {
   background: #f8fafc;
 }
 
-#gameMapImage {
-  display: block;
+#gmGameMap {
   width: 100%;
-  max-height: 62vh;
-  object-fit: contain;
-  background: white;
+  min-height: 56vh;
+  background: #eef7f5;
+}
+
+.gm-open-map {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-height: 42px;
+  margin-top: 12px;
+  border-radius: 8px;
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-weight: 900;
 }
 
 .map-placeholder {
@@ -770,6 +781,13 @@ input:focus {
   max-width: 320px;
   color: var(--muted);
   line-height: 1.45;
+}
+
+.gm-location-marker {
+  border: 3px solid white;
+  border-radius: 999px;
+  background: var(--accent);
+  box-shadow: 0 0 0 5px rgba(49, 87, 201, 0.22), 0 8px 20px rgba(24, 33, 43, 0.22);
 }
 
 .gm-tracking-card {

@@ -38,9 +38,13 @@ const contentTypes = {
   ".css": "text/css; charset=utf-8",
   ".js": "text/javascript; charset=utf-8",
   ".json": "application/json; charset=utf-8",
+  ".kml": "application/vnd.google-earth.kml+xml; charset=utf-8",
   ".svg": "image/svg+xml",
   ".png": "image/png"
 };
+
+const DEFAULT_NORMAL_MAP_URL = "/maps/game-map.kml";
+const DEFAULT_CAT1_MAP_URL = "/maps/cat1-map.kml";
 
 function createStarterTeam() {
   return [
@@ -75,8 +79,8 @@ function createStarterGameState() {
   return {
     cat1Active: false,
     source: "manual",
-    normalMapUrl: "",
-    cat1MapUrl: "",
+    normalMapUrl: DEFAULT_NORMAL_MAP_URL,
+    cat1MapUrl: DEFAULT_CAT1_MAP_URL,
     updatedAt: new Date().toISOString()
   };
 }
@@ -288,12 +292,22 @@ async function getGameMasterByToken(token) {
 function cleanMapUrl(value) {
   const input = String(value || "").trim().slice(0, 500);
   if (!input) return "";
+  if (/^\/[A-Za-z0-9._~:/?#[\]@!$&'()*+,;=%-]+$/.test(input)) return input;
   try {
     const url = new URL(input);
     return url.protocol === "https:" || url.protocol === "http:" ? url.toString() : "";
   } catch {
     return "";
   }
+}
+
+function normalizeGameState(state) {
+  return {
+    ...createStarterGameState(),
+    ...(state || {}),
+    normalMapUrl: cleanMapUrl(state?.normalMapUrl) || DEFAULT_NORMAL_MAP_URL,
+    cat1MapUrl: cleanMapUrl(state?.cat1MapUrl) || DEFAULT_CAT1_MAP_URL
+  };
 }
 
 function isValidCoordinate(lat, lng) {
@@ -427,7 +441,7 @@ async function handleApi(req, res, pathname) {
       sendJson(res, 401, { error: "Admin login required" });
       return;
     }
-    sendJson(res, 200, { gameState: await readStore("gameState", createStarterGameState()) });
+    sendJson(res, 200, { gameState: normalizeGameState(await readStore("gameState", createStarterGameState())) });
     return;
   }
 
@@ -437,7 +451,7 @@ async function handleApi(req, res, pathname) {
       return;
     }
     const body = await parseBody(req);
-    const previous = await readStore("gameState", createStarterGameState());
+    const previous = normalizeGameState(await readStore("gameState", createStarterGameState()));
     const next = {
       ...previous,
       cat1Active: Boolean(body.cat1Active),
@@ -619,7 +633,7 @@ async function handleApi(req, res, pathname) {
     sendJson(res, 200, {
       id: master.id,
       name: master.name,
-      gameState: await readStore("gameState", createStarterGameState())
+      gameState: normalizeGameState(await readStore("gameState", createStarterGameState()))
     });
     return;
   }
