@@ -849,12 +849,16 @@ input:focus {
 }
 
 .game-ops-grid {
-  align-items: stretch;
+  align-items: start;
 }
 
 .game-state-panel,
 .game-master-panel {
   min-height: 0;
+}
+
+.game-state-panel {
+  align-self: start;
 }
 
 .game-state-form {
@@ -868,6 +872,11 @@ input:focus {
   background: var(--accent);
   color: white;
   font-weight: 800;
+}
+
+#gameStateMessage {
+  min-height: 0;
+  margin: 10px 0 0;
 }
 
 .toggle-row {
