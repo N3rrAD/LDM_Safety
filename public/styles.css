@@ -865,6 +865,23 @@ input:focus {
   min-height: 0;
 }
 
+.game-master-panel {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  max-height: 520px;
+  overflow: hidden;
+}
+
+.game-master-scroll {
+  display: grid;
+  align-content: start;
+  gap: 12px;
+  min-height: 0;
+  overflow-y: auto;
+  padding-right: 6px;
+  scrollbar-gutter: stable;
+}
+
 .compact-head {
   margin-bottom: 10px;
 }
@@ -906,10 +923,9 @@ input:focus {
 }
 
 .compact-links {
-  margin-top: 12px;
-  max-height: 260px;
-  overflow-y: auto;
-  padding-right: 4px;
+  max-height: none;
+  overflow: visible;
+  padding-right: 0;
 }
 
 .checkin-card {
