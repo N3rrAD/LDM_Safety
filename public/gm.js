@@ -21,6 +21,23 @@ let gmUserMarker = null;
 let activeMapUrl = "";
 let activeStateSignature = "";
 
+const stationStyles = {
+  "bridgewatch under pressure": { color: "#f97316", short: "BW" },
+  "capture the cup": { color: "#6d4bd8", short: "CC" },
+  "dead reckoning": { color: "#f05a28", short: "DR" },
+  "full salvo": { color: "#c2185b", short: "FS" },
+  "keepy uppy": { color: "#5d4037", short: "KU" },
+  "knot showdown": { color: "#4b5563", short: "KS" },
+  "marker maze": { color: "#283593", short: "MM" },
+  "minefield": { color: "#b93220", short: "MF" },
+  "sea state 5": { color: "#0284c7", short: "S5" },
+  "shuttle siege": { color: "#795548", short: "SS" },
+  "silent convoy": { color: "#6b6f15", short: "SC" },
+  "superstructure": { color: "#facc15", short: "ST" },
+  "triple p": { color: "#0f8f5f", short: "TP" },
+  "underway": { color: "#0ea5e9", short: "UW" }
+};
+
 function setGmStatus(message, tone = "") {
   gmStatusMessage.textContent = message;
   gmStatusMessage.className = `message ${tone}`;
@@ -68,6 +85,69 @@ function gmLocationIcon() {
   });
 }
 
+function escapeHtml(value) {
+  return String(value)
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+}
+
+function stationKey(name = "") {
+  return String(name).replace(/\s*\(SI\)\s*$/i, "").trim().toLowerCase();
+}
+
+function stationIcon(name) {
+  const style = stationStyles[stationKey(name)] || { color: "#3157c9", short: "GM" };
+  return L.divIcon({
+    className: "station-marker",
+    html: `
+      <span class="station-pin" style="background:${style.color}"><span class="station-code">${escapeHtml(style.short)}</span></span>
+      <span class="station-label">${escapeHtml(name)}</span>
+    `,
+    iconSize: [170, 42],
+    iconAnchor: [15, 34],
+    popupAnchor: [0, -34]
+  });
+}
+
+function styleKmlFeature(feature) {
+  const name = feature?.properties?.name || "";
+  const station = stationStyles[stationKey(name)];
+  if (!station) return {};
+  return {
+    color: station.color,
+    fillColor: station.color,
+    fillOpacity: 0.18,
+    opacity: 0.85,
+    weight: 3
+  };
+}
+
+function createKmlLayer() {
+  const seenStations = new Set();
+  return L.geoJson(null, {
+    filter: feature => {
+      if (feature?.geometry?.type !== "Point") return true;
+      const key = stationKey(feature?.properties?.name);
+      if (!stationStyles[key]) return true;
+      if (seenStations.has(key)) return false;
+      seenStations.add(key);
+      return true;
+    },
+    pointToLayer: (feature, latLng) => {
+      const name = feature?.properties?.name || "Game station";
+      return L.marker(latLng, { icon: stationIcon(name), zIndexOffset: 500 });
+    },
+    style: styleKmlFeature,
+    onEachFeature: (feature, layer) => {
+      const name = feature?.properties?.name;
+      if (name) layer.bindPopup(`<strong>${escapeHtml(name)}</strong>`);
+    }
+  });
+}
+
 function updateGmUserMarker(position) {
   ensureGmMap();
   const latLng = [position.coords.latitude, position.coords.longitude];
@@ -97,7 +177,7 @@ function loadKmlMap(mapUrl, updatedAt) {
     gmKmlLayer = null;
   }
 
-  gmKmlLayer = omnivore.kml(nextMapUrl)
+  gmKmlLayer = omnivore.kml(nextMapUrl, null, createKmlLayer())
     .on("ready", () => {
       mapPlaceholder.classList.add("hidden");
       const bounds = gmKmlLayer.getBounds();
