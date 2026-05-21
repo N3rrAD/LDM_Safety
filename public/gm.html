@@ -45,6 +45,22 @@
         <p id="gmStatusMessage" class="message"></p>
         <p class="fineprint">If Cat 1 is switched on by admin, this page will change to the Cat 1 map automatically.</p>
       </section>
+
+      <section id="gmNearestAedCard" class="checkin-card aed-nearest-card hidden">
+        <div class="section-head">
+          <div>
+            <p class="eyebrow">Nearest AED</p>
+            <h2 id="gmNearestAedName">Waiting for GPS</h2>
+          </div>
+          <span id="gmNearestAedDistance">--</span>
+        </div>
+        <p id="gmNearestAedNote" class="helper">Your nearest AED will appear here after GPS is available.</p>
+        <a id="gmNearestAedDirections" class="primary-action directions-link" href="#" target="_blank" rel="noreferrer">Get Directions</a>
+        <div class="ic-map-wrap">
+          <div id="gmAedMap"></div>
+        </div>
+        <div id="gmNearbyAedList" class="nearby-aed-list"></div>
+      </section>
     </main>
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>

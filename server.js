@@ -495,9 +495,11 @@ async function handleApi(req, res, pathname) {
 
   if (req.method === "GET" && pathname === "/api/aeds/nearest") {
     const url = new URL(req.url, `http://${req.headers.host}`);
-    const member = await getTeamMemberByToken(url.searchParams.get("token"));
-    if (!member) {
-      sendJson(res, 401, { error: "Invalid IC link" });
+    const token = url.searchParams.get("token");
+    const member = await getTeamMemberByToken(token);
+    const gameMaster = member ? null : await getGameMasterByToken(token);
+    if (!member && !gameMaster) {
+      sendJson(res, 401, { error: "Invalid private link" });
       return;
     }
     const lat = Number(url.searchParams.get("lat"));

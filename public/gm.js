@@ -9,6 +9,12 @@ const mapPlaceholder = document.querySelector("#mapPlaceholder");
 const gmNoteInput = document.querySelector("#gmNoteInput");
 const gmUpdateButton = document.querySelector("#gmUpdateButton");
 const gmStatusMessage = document.querySelector("#gmStatusMessage");
+const gmNearestAedCard = document.querySelector("#gmNearestAedCard");
+const gmNearestAedName = document.querySelector("#gmNearestAedName");
+const gmNearestAedDistance = document.querySelector("#gmNearestAedDistance");
+const gmNearestAedNote = document.querySelector("#gmNearestAedNote");
+const gmNearestAedDirections = document.querySelector("#gmNearestAedDirections");
+const gmNearbyAedList = document.querySelector("#gmNearbyAedList");
 const gmLiveIntervalMs = 30000;
 const gmStateIntervalMs = 2000;
 let gmWatchId = null;
@@ -18,8 +24,12 @@ let gmLastSentAt = 0;
 let gmMap = null;
 let gmKmlLayer = null;
 let gmUserMarker = null;
+let gmAedMap = null;
+let gmAedUserMarker = null;
+let gmNearestAedMarkers = [];
 let activeMapUrl = "";
 let activeStateSignature = "";
+let gmLastAedLookupAt = 0;
 
 const stationStyles = {
   "bridgewatch under pressure": { color: "#f97316", short: "BW" },
@@ -85,6 +95,16 @@ function gmLocationIcon() {
   });
 }
 
+function aedIcon() {
+  return L.divIcon({
+    className: "aed-marker",
+    html: "AED",
+    iconSize: [42, 28],
+    iconAnchor: [21, 28],
+    popupAnchor: [0, -28]
+  });
+}
+
 function escapeHtml(value) {
   return String(value)
     .replaceAll("&", "&amp;")
@@ -92,6 +112,16 @@ function escapeHtml(value) {
     .replaceAll(">", "&gt;")
     .replaceAll('"', "&quot;")
     .replaceAll("'", "&#039;");
+}
+
+function formatDistance(meters) {
+  if (!Number.isFinite(meters)) return "--";
+  if (meters < 1000) return `${meters} m`;
+  return `${(meters / 1000).toFixed(1)} km`;
+}
+
+function directionsLink(fromLat, fromLng, toLat, toLng) {
+  return `https://www.google.com/maps/dir/?api=1&origin=${fromLat},${fromLng}&destination=${toLat},${toLng}&travelmode=walking`;
 }
 
 function stationKey(name = "") {
@@ -156,6 +186,80 @@ function updateGmUserMarker(position) {
   } else {
     gmUserMarker = L.marker(latLng, { icon: gmLocationIcon() }).addTo(gmMap).bindPopup("Your location");
   }
+}
+
+function ensureGmAedMap(lat, lng) {
+  gmNearestAedCard.classList.remove("hidden");
+  if (gmAedMap) return;
+  gmAedMap = L.map("gmAedMap", { zoomControl: true }).setView([lat, lng], 16);
+  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+    attribution: "&copy; OpenStreetMap contributors"
+  }).addTo(gmAedMap);
+  setTimeout(() => gmAedMap.invalidateSize(), 0);
+}
+
+async function safelyUpdateNearestAeds(position) {
+  try {
+    await updateNearestAeds(position);
+  } catch (error) {
+    gmNearestAedCard.classList.remove("hidden");
+    gmNearestAedName.textContent = "AED lookup unavailable";
+    gmNearestAedDistance.textContent = "--";
+    gmNearestAedNote.textContent = error.message || "Could not load nearby AEDs.";
+    gmNearbyAedList.innerHTML = "";
+  }
+}
+
+async function updateNearestAeds(position) {
+  const now = Date.now();
+  if (now - gmLastAedLookupAt < gmLiveIntervalMs - 1000) return;
+  gmLastAedLookupAt = now;
+  const lat = position.coords.latitude;
+  const lng = position.coords.longitude;
+  ensureGmAedMap(lat, lng);
+
+  const response = await fetch(`/api/aeds/nearest?token=${encodeURIComponent(gmToken)}&lat=${encodeURIComponent(lat)}&lng=${encodeURIComponent(lng)}`, { cache: "no-store" });
+  const data = await response.json();
+  if (!response.ok) throw new Error(data.error || "Could not load nearby AEDs.");
+  const nearest = data.nearest || [];
+  if (!nearest.length) {
+    gmNearestAedName.textContent = "No AED found";
+    gmNearestAedDistance.textContent = "--";
+    gmNearestAedNote.textContent = "No AED locations are available yet.";
+    gmNearbyAedList.innerHTML = "";
+    return;
+  }
+
+  const first = nearest[0];
+  gmNearestAedName.textContent = first.name;
+  gmNearestAedDistance.textContent = formatDistance(first.distanceMeters);
+  gmNearestAedNote.textContent = first.note || "AED location available.";
+  gmNearestAedDirections.href = directionsLink(lat, lng, first.lat, first.lng);
+
+  const userLatLng = [lat, lng];
+  if (gmAedUserMarker) {
+    gmAedUserMarker.setLatLng(userLatLng);
+  } else {
+    gmAedUserMarker = L.marker(userLatLng, { icon: gmLocationIcon() }).addTo(gmAedMap).bindPopup("Your location");
+  }
+
+  gmNearestAedMarkers.forEach(marker => marker.remove());
+  gmNearestAedMarkers = nearest.slice(0, 5).map(aed => L.marker([aed.lat, aed.lng], { icon: aedIcon() })
+    .addTo(gmAedMap)
+    .bindPopup(`<strong>${escapeHtml(aed.name)}</strong><br>${formatDistance(aed.distanceMeters)} away<br>${escapeHtml(aed.note || "")}`));
+
+  const bounds = L.latLngBounds([userLatLng, ...nearest.slice(0, 5).map(aed => [aed.lat, aed.lng])]);
+  gmAedMap.fitBounds(bounds, { padding: [28, 28], maxZoom: 17 });
+
+  gmNearbyAedList.innerHTML = nearest.slice(0, 5).map(aed => `
+    <article class="nearby-aed-row">
+      <div>
+        <strong>${escapeHtml(aed.name)}</strong>
+        <span>${formatDistance(aed.distanceMeters)} away</span>
+      </div>
+      <a href="${directionsLink(lat, lng, aed.lat, aed.lng)}" target="_blank" rel="noreferrer">Directions</a>
+    </article>
+  `).join("");
 }
 
 function versionedMapUrl(mapUrl, updatedAt) {
@@ -274,6 +378,7 @@ function startGmTracking() {
       try {
         gmUpdateButton.disabled = false;
         updateGmUserMarker(position);
+        await safelyUpdateNearestAeds(position);
         await sendGmPosition(position);
       } catch (error) {
         setGmStatus(error.message || "Could not send GPS update.", "error");
@@ -295,6 +400,7 @@ function startGmTracking() {
     try {
       const position = await getGmPosition();
       updateGmUserMarker(position);
+      await safelyUpdateNearestAeds(position);
       await sendGmPosition(position);
     } catch (error) {
       setGmStatus(error.message || "Waiting for GPS permission/location.", "error");
