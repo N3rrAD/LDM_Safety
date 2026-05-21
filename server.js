@@ -12,6 +12,9 @@ const TEAM_FILE = path.join(DATA_DIR, "team.json");
 const LOCATIONS_FILE = path.join(DATA_DIR, "locations.json");
 const ADMIN_FILE = path.join(DATA_DIR, "admin.json");
 const AED_FILE = path.join(DATA_DIR, "aeds.json");
+const GAME_MASTERS_FILE = path.join(DATA_DIR, "game-masters.json");
+const GAME_MASTER_LOCATIONS_FILE = path.join(DATA_DIR, "game-master-locations.json");
+const GAME_STATE_FILE = path.join(DATA_DIR, "game-state.json");
 const PUBLIC_DIR = path.join(__dirname, "public");
 const REDIS_URL = process.env.UPSTASH_REDIS_REST_URL || process.env.KV_REST_API_URL;
 const REDIS_TOKEN = process.env.UPSTASH_REDIS_REST_TOKEN || process.env.KV_REST_API_TOKEN;
@@ -22,7 +25,10 @@ const STORE_KEYS = {
   team: `${STORE_PREFIX}:team`,
   locations: `${STORE_PREFIX}:locations`,
   admin: `${STORE_PREFIX}:admin`,
-  aeds: `${STORE_PREFIX}:aeds`
+  aeds: `${STORE_PREFIX}:aeds`,
+  gameMasters: `${STORE_PREFIX}:game-masters`,
+  gameMasterLocations: `${STORE_PREFIX}:game-master-locations`,
+  gameState: `${STORE_PREFIX}:game-state`
 };
 
 const adminSessions = new Map();
@@ -54,6 +60,27 @@ function createStarterTeam() {
   }));
 }
 
+function createStarterGameMasters() {
+  return [
+    { id: "gm-1", name: "Game Master 1" },
+    { id: "gm-2", name: "Game Master 2" },
+    { id: "gm-3", name: "Game Master 3" }
+  ].map(master => ({
+    ...master,
+    token: crypto.randomBytes(18).toString("hex")
+  }));
+}
+
+function createStarterGameState() {
+  return {
+    cat1Active: false,
+    source: "manual",
+    normalMapUrl: "",
+    cat1MapUrl: "",
+    updatedAt: new Date().toISOString()
+  };
+}
+
 async function ensureDataFiles() {
   if (HAS_REDIS) {
     await ensureRemoteData();
@@ -80,6 +107,21 @@ async function ensureDataFiles() {
   } catch {
     await writeJson(AED_FILE, []);
   }
+  try {
+    await fs.access(GAME_MASTERS_FILE);
+  } catch {
+    await writeJson(GAME_MASTERS_FILE, createStarterGameMasters());
+  }
+  try {
+    await fs.access(GAME_MASTER_LOCATIONS_FILE);
+  } catch {
+    await writeJson(GAME_MASTER_LOCATIONS_FILE, { latest: {}, history: [] });
+  }
+  try {
+    await fs.access(GAME_STATE_FILE);
+  } catch {
+    await writeJson(GAME_STATE_FILE, createStarterGameState());
+  }
 }
 
 async function ensureRemoteData() {
@@ -94,6 +136,15 @@ async function ensureRemoteData() {
   }
   if (!(await readStore("aeds", null))) {
     await writeStore("aeds", await readJson(AED_FILE, []));
+  }
+  if (!(await readStore("gameMasters", null))) {
+    await writeStore("gameMasters", await readJson(GAME_MASTERS_FILE, createStarterGameMasters()));
+  }
+  if (!(await readStore("gameMasterLocations", null))) {
+    await writeStore("gameMasterLocations", { latest: {}, history: [] });
+  }
+  if (!(await readStore("gameState", null))) {
+    await writeStore("gameState", await readJson(GAME_STATE_FILE, createStarterGameState()));
   }
 }
 
@@ -136,7 +187,10 @@ async function readStore(name, fallback) {
     team: TEAM_FILE,
     locations: LOCATIONS_FILE,
     admin: ADMIN_FILE,
-    aeds: AED_FILE
+    aeds: AED_FILE,
+    gameMasters: GAME_MASTERS_FILE,
+    gameMasterLocations: GAME_MASTER_LOCATIONS_FILE,
+    gameState: GAME_STATE_FILE
   };
   return readJson(files[name], fallback);
 }
@@ -154,7 +208,10 @@ async function writeStore(name, value) {
     team: TEAM_FILE,
     locations: LOCATIONS_FILE,
     admin: ADMIN_FILE,
-    aeds: AED_FILE
+    aeds: AED_FILE,
+    gameMasters: GAME_MASTERS_FILE,
+    gameMasterLocations: GAME_MASTER_LOCATIONS_FILE,
+    gameState: GAME_STATE_FILE
   };
   await writeJson(files[name], value);
 }
@@ -221,6 +278,22 @@ function parseBody(req) {
 async function getTeamMemberByToken(token) {
   const team = await readStore("team", []);
   return team.find(member => member.token === token);
+}
+
+async function getGameMasterByToken(token) {
+  const gameMasters = await readStore("gameMasters", []);
+  return gameMasters.find(master => master.token === token);
+}
+
+function cleanMapUrl(value) {
+  const input = String(value || "").trim().slice(0, 500);
+  if (!input) return "";
+  try {
+    const url = new URL(input);
+    return url.protocol === "https:" || url.protocol === "http:" ? url.toString() : "";
+  } catch {
+    return "";
+  }
 }
 
 function isValidCoordinate(lat, lng) {
@@ -330,6 +403,51 @@ async function handleApi(req, res, pathname) {
         url: `/ic.html?t=${encodeURIComponent(member.token)}`
       }))
     });
+    return;
+  }
+
+  if (req.method === "GET" && pathname === "/api/game-master-links") {
+    if (!(await isAdmin(req))) {
+      sendJson(res, 401, { error: "Admin login required" });
+      return;
+    }
+    const gameMasters = await readStore("gameMasters", []);
+    sendJson(res, 200, {
+      gameMasters: gameMasters.map(master => ({
+        id: master.id,
+        name: master.name,
+        url: `/gm.html?t=${encodeURIComponent(master.token)}`
+      }))
+    });
+    return;
+  }
+
+  if (req.method === "GET" && pathname === "/api/game-state") {
+    if (!(await isAdmin(req))) {
+      sendJson(res, 401, { error: "Admin login required" });
+      return;
+    }
+    sendJson(res, 200, { gameState: await readStore("gameState", createStarterGameState()) });
+    return;
+  }
+
+  if (req.method === "POST" && pathname === "/api/game-state") {
+    if (!(await isAdmin(req))) {
+      sendJson(res, 401, { error: "Admin login required" });
+      return;
+    }
+    const body = await parseBody(req);
+    const previous = await readStore("gameState", createStarterGameState());
+    const next = {
+      ...previous,
+      cat1Active: Boolean(body.cat1Active),
+      source: "manual",
+      normalMapUrl: cleanMapUrl(body.normalMapUrl),
+      cat1MapUrl: cleanMapUrl(body.cat1MapUrl),
+      updatedAt: new Date().toISOString()
+    };
+    await writeStore("gameState", next);
+    sendJson(res, 200, { ok: true, gameState: next });
     return;
   }
 
@@ -488,6 +606,74 @@ async function handleApi(req, res, pathname) {
     locations.history = locations.history.slice(0, 500);
     await writeStore("locations", locations);
     sendJson(res, 200, { ok: true, location: record });
+    return;
+  }
+
+  if (req.method === "GET" && pathname === "/api/game-master/me") {
+    const url = new URL(req.url, `http://${req.headers.host}`);
+    const master = await getGameMasterByToken(url.searchParams.get("token"));
+    if (!master) {
+      sendJson(res, 404, { error: "Invalid Game Master link" });
+      return;
+    }
+    sendJson(res, 200, {
+      id: master.id,
+      name: master.name,
+      gameState: await readStore("gameState", createStarterGameState())
+    });
+    return;
+  }
+
+  if (req.method === "POST" && pathname === "/api/game-master/location") {
+    const body = await parseBody(req);
+    const master = await getGameMasterByToken(body.token);
+    if (!master) {
+      sendJson(res, 401, { error: "Invalid Game Master link" });
+      return;
+    }
+
+    const lat = Number(body.lat);
+    const lng = Number(body.lng);
+    const accuracy = Number(body.accuracy || 0);
+    if (!isValidCoordinate(lat, lng)) {
+      sendJson(res, 400, { error: "Invalid GPS coordinates" });
+      return;
+    }
+
+    const now = new Date().toISOString();
+    const record = {
+      id: master.id,
+      name: master.name,
+      lat,
+      lng,
+      accuracy: Number.isFinite(accuracy) ? accuracy : 0,
+      note: String(body.note || "").slice(0, 120),
+      updatedAt: now
+    };
+    const locations = await readStore("gameMasterLocations", { latest: {}, history: [] });
+    locations.latest[master.id] = record;
+    locations.history.unshift(record);
+    locations.history = locations.history.slice(0, 500);
+    await writeStore("gameMasterLocations", locations);
+    sendJson(res, 200, { ok: true, location: record });
+    return;
+  }
+
+  if (req.method === "GET" && pathname === "/api/game-master/locations") {
+    if (!(await isAdmin(req))) {
+      sendJson(res, 401, { error: "Admin login required" });
+      return;
+    }
+    const gameMasters = await readStore("gameMasters", []);
+    const locations = await readStore("gameMasterLocations", { latest: {}, history: [] });
+    sendJson(res, 200, {
+      gameMasters: gameMasters.map(master => ({
+        id: master.id,
+        name: master.name,
+        location: locations.latest[master.id] || null
+      })),
+      history: locations.history.slice(0, 50)
+    });
     return;
   }
 

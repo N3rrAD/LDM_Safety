@@ -25,10 +25,19 @@ const aedLngInput = document.querySelector("#aedLngInput");
 const aedNoteInput = document.querySelector("#aedNoteInput");
 const aedMessage = document.querySelector("#aedMessage");
 const aedList = document.querySelector("#aedList");
+const gameStateForm = document.querySelector("#gameStateForm");
+const cat1Toggle = document.querySelector("#cat1Toggle");
+const normalMapInput = document.querySelector("#normalMapInput");
+const cat1MapInput = document.querySelector("#cat1MapInput");
+const gameStateMessage = document.querySelector("#gameStateMessage");
+const gameStateUpdated = document.querySelector("#gameStateUpdated");
+const gameMasterList = document.querySelector("#gameMasterList");
+const gameMasterLinksList = document.querySelector("#gameMasterLinksList");
 
 let map;
 let markers = new Map();
 let aedMarkers = new Map();
+let gameMasterMarkers = new Map();
 let aedLayer;
 let firstLocationLoad = true;
 let knownUpdates = new Map();
@@ -64,6 +73,16 @@ function aedIcon() {
   return L.divIcon({
     className: "aed-marker",
     html: "AED",
+    iconSize: [42, 28],
+    iconAnchor: [21, 28],
+    popupAnchor: [0, -28]
+  });
+}
+
+function gameMasterIcon() {
+  return L.divIcon({
+    className: "gm-marker",
+    html: "GM",
     iconSize: [42, 28],
     iconAnchor: [21, 28],
     popupAnchor: [0, -28]
@@ -134,15 +153,61 @@ function fitMapToLatestLocations() {
   map.fitBounds(latestBounds, { padding: [36, 36], maxZoom: 16 });
 }
 
-function updateLatestBounds(people = [], aeds = []) {
+function updateLatestBounds(people = [], aeds = [], gameMasters = []) {
   latestBounds = [
     ...people.filter(person => person.location).map(person => [person.location.lat, person.location.lng]),
+    ...gameMasters.filter(master => master.location).map(master => [master.location.lat, master.location.lng]),
     ...aeds.map(aed => [aed.lat, aed.lng])
   ];
   if (latestBounds.length && !mapHasAutoFit) {
     fitMapToLatestLocations();
     mapHasAutoFit = true;
   }
+}
+
+function renderGameState(gameState) {
+  if (!gameStateForm || !gameState) return;
+  cat1Toggle.checked = Boolean(gameState.cat1Active);
+  normalMapInput.value = gameState.normalMapUrl || "";
+  cat1MapInput.value = gameState.cat1MapUrl || "";
+  gameStateUpdated.textContent = `${gameState.cat1Active ? "Cat 1 active" : "Normal mode"} · ${timeAgo(gameState.updatedAt)}`;
+}
+
+function renderGameMasters(gameMasters) {
+  if (!gameMasterList) return;
+  gameMasterList.innerHTML = "";
+  gameMasters.forEach(master => {
+    const location = master.location;
+    const stale = isStale(location);
+    const live = isLive(location);
+    const row = document.createElement("article");
+    row.className = stale ? "person-row stale" : live ? "person-row live" : "person-row";
+    row.innerHTML = `
+      <div>
+        <strong>${escapeHtml(master.name)}</strong>
+        <span>${location ? `${live ? "Live" : "Updated"} ${timeAgo(location.updatedAt)}` : "No location yet"}</span>
+        ${stale ? `<em>${location ? `Over ${staleMinutes}m old` : "Needs check-in"}</em>` : ""}
+      </div>
+      <div class="row-actions">
+        ${location ? `<a href="${mapsLink(location)}" target="_blank" rel="noreferrer">Map</a>` : ""}
+      </div>
+    `;
+    gameMasterList.appendChild(row);
+
+    if (!location) return;
+    const latLng = [location.lat, location.lng];
+    const popup = `
+      <strong>${escapeHtml(master.name)}</strong><br>
+      Game Master<br>
+      Updated ${timeAgo(location.updatedAt)}<br>
+      Accuracy: ${Math.round(location.accuracy)}m
+    `;
+    if (gameMasterMarkers.has(master.id)) {
+      gameMasterMarkers.get(master.id).setLatLng(latLng).setPopupContent(popup);
+    } else {
+      gameMasterMarkers.set(master.id, L.marker(latLng, { icon: gameMasterIcon() }).addTo(map).bindPopup(popup));
+    }
+  });
 }
 
 function renderPeople(people) {
@@ -252,11 +317,13 @@ function renderAeds(aeds) {
 
 async function loadLocations() {
   ensureMap();
-  const [locationsResponse, aedsResponse] = await Promise.all([
+  const [locationsResponse, aedsResponse, gameMastersResponse, gameStateResponse] = await Promise.all([
     fetch("/api/locations", { headers: authHeaders() }),
-    fetch("/api/aeds", { headers: authHeaders() })
+    fetch("/api/aeds", { headers: authHeaders() }),
+    fetch("/api/game-master/locations", { headers: authHeaders() }),
+    fetch("/api/game-state", { headers: authHeaders() })
   ]);
-  if (locationsResponse.status === 401 || aedsResponse.status === 401) {
+  if ([locationsResponse, aedsResponse, gameMastersResponse, gameStateResponse].some(response => response.status === 401)) {
     sessionStorage.removeItem("adminToken");
     loginPanel.classList.remove("hidden");
     dashboard.classList.add("hidden");
@@ -264,9 +331,13 @@ async function loadLocations() {
   }
   const data = await locationsResponse.json();
   const aedData = await aedsResponse.json();
+  const gameMasterData = await gameMastersResponse.json();
+  const gameStateData = await gameStateResponse.json();
   renderPeople(data.people);
   renderAeds(aedData.aeds || []);
-  updateLatestBounds(data.people, aedData.aeds || []);
+  renderGameMasters(gameMasterData.gameMasters || []);
+  renderGameState(gameStateData.gameState);
+  updateLatestBounds(data.people, aedData.aeds || [], gameMasterData.gameMasters || []);
   lastRefresh.textContent = `Refreshed ${new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`;
 }
 
@@ -296,6 +367,27 @@ async function loadLinks() {
       </div>
     `;
     linksList.appendChild(item);
+  });
+
+  if (!gameMasterLinksList) return;
+  const gmResponse = await fetch("/api/game-master-links", { headers: authHeaders() });
+  const gmData = await gmResponse.json();
+  gameMasterLinksList.innerHTML = "";
+  gmData.gameMasters.forEach(master => {
+    const url = `${location.origin}${master.url}`;
+    const item = document.createElement("article");
+    item.className = "link-row";
+    item.innerHTML = `
+      <div class="link-main">
+        <strong>${escapeHtml(master.name)}</strong>
+        <a class="private-link" href="${escapeHtml(url)}" target="_blank" rel="noreferrer">${escapeHtml(displayUrl(url))}</a>
+      </div>
+      <div class="link-actions">
+        <a class="action-link" href="${escapeHtml(url)}" target="_blank" rel="noreferrer">Open</a>
+        <button class="copy-link" type="button" data-url="${escapeHtml(url)}">Copy</button>
+      </div>
+    `;
+    gameMasterLinksList.appendChild(item);
   });
 }
 
@@ -368,6 +460,20 @@ linksList.addEventListener("click", async event => {
   }, 1200);
 });
 
+gameMasterLinksList?.addEventListener("click", async event => {
+  const button = event.target.closest(".copy-link");
+  if (!button) return;
+  try {
+    await navigator.clipboard.writeText(button.dataset.url);
+    button.textContent = "Copied";
+  } catch {
+    button.textContent = "Open link";
+  }
+  setTimeout(() => {
+    button.textContent = "Copy";
+  }, 1200);
+});
+
 aedForm.addEventListener("submit", async event => {
   event.preventDefault();
   aedMessage.textContent = "Adding AED...";
@@ -404,6 +510,30 @@ aedList.addEventListener("click", async event => {
   if (response.ok) {
     await loadLocations();
   }
+});
+
+gameStateForm?.addEventListener("submit", async event => {
+  event.preventDefault();
+  gameStateMessage.textContent = "Saving game map mode...";
+  gameStateMessage.className = "message";
+  const response = await fetch("/api/game-state", {
+    method: "POST",
+    headers: { "content-type": "application/json", ...authHeaders() },
+    body: JSON.stringify({
+      cat1Active: cat1Toggle.checked,
+      normalMapUrl: normalMapInput.value,
+      cat1MapUrl: cat1MapInput.value
+    })
+  });
+  const data = await response.json();
+  if (!response.ok) {
+    gameStateMessage.textContent = data.error || "Could not save game map mode";
+    gameStateMessage.className = "message error";
+    return;
+  }
+  renderGameState(data.gameState);
+  gameStateMessage.textContent = "Game Master phones will switch automatically.";
+  gameStateMessage.className = "message success";
 });
 
 notifyButton.addEventListener("click", async () => {

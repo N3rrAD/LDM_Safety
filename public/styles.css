@@ -632,6 +632,18 @@ input:focus {
   box-shadow: 0 10px 22px rgba(249, 115, 22, 0.35);
 }
 
+.gm-marker {
+  display: grid;
+  place-items: center;
+  border: 2px solid white;
+  border-radius: 8px;
+  background: var(--accent);
+  color: white;
+  font-size: 0.68rem;
+  font-weight: 900;
+  box-shadow: 0 10px 22px rgba(49, 87, 201, 0.3);
+}
+
 .hidden {
   display: none !important;
 }
@@ -660,6 +672,155 @@ input:focus {
   background:
     radial-gradient(circle at top left, rgba(14, 124, 114, 0.2), transparent 32rem),
     linear-gradient(135deg, #f6f3ee, #edf1ff 54%, #edf7f5);
+}
+
+.gm-shell {
+  display: grid;
+  gap: 14px;
+  width: min(560px, calc(100% - 24px));
+  margin: 0 auto;
+  padding: 18px 0 28px;
+}
+
+.gm-hero,
+.gm-map-card {
+  border-radius: 8px;
+  box-shadow: var(--shadow-soft);
+}
+
+.gm-hero {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+  padding: 20px;
+  background:
+    linear-gradient(135deg, rgba(12, 79, 74, 0.94), rgba(49, 87, 201, 0.82)),
+    var(--brand-dark);
+  color: white;
+}
+
+.gm-hero .eyebrow {
+  color: rgba(255, 255, 255, 0.78);
+}
+
+.gm-hero h1 {
+  font-size: clamp(2rem, 10vw, 3.25rem);
+}
+
+.mode-badge {
+  flex: 0 0 auto;
+  border: 1px solid rgba(255, 255, 255, 0.34);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.16);
+  color: white;
+  padding: 8px 12px;
+  font-size: 0.82rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.mode-badge.cat1 {
+  background: var(--danger);
+  border-color: rgba(255, 255, 255, 0.36);
+}
+
+.gm-map-card {
+  overflow: hidden;
+  border: 1px solid var(--line);
+  background: var(--panel-solid);
+  padding: 16px;
+}
+
+.gm-map-link {
+  display: block;
+  overflow: hidden;
+  border: 1px solid rgba(24, 33, 43, 0.08);
+  border-radius: 8px;
+  background: #f8fafc;
+}
+
+#gameMapImage {
+  display: block;
+  width: 100%;
+  max-height: 62vh;
+  object-fit: contain;
+  background: white;
+}
+
+.map-placeholder {
+  display: grid;
+  place-items: center;
+  min-height: 330px;
+  padding: 24px;
+  background:
+    linear-gradient(90deg, rgba(49, 87, 201, 0.08) 1px, transparent 1px),
+    linear-gradient(0deg, rgba(14, 124, 114, 0.1) 1px, transparent 1px),
+    linear-gradient(135deg, #f8fafc, #eef7f5);
+  background-size: 34px 34px;
+  color: var(--ink);
+  text-align: center;
+}
+
+.map-placeholder strong {
+  font-size: 1.45rem;
+}
+
+.map-placeholder span {
+  max-width: 320px;
+  color: var(--muted);
+  line-height: 1.45;
+}
+
+.gm-tracking-card {
+  width: 100%;
+}
+
+.game-ops-grid {
+  align-items: stretch;
+}
+
+.game-state-panel,
+.game-master-panel {
+  min-height: 0;
+}
+
+.game-state-form {
+  display: grid;
+  gap: 12px;
+}
+
+.game-state-form button {
+  min-height: 44px;
+  border-radius: 8px;
+  background: var(--accent);
+  color: white;
+  font-weight: 800;
+}
+
+.toggle-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 48px;
+  border: 1px solid rgba(24, 33, 43, 0.08);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.74);
+  padding: 0 12px;
+  color: var(--ink);
+}
+
+.toggle-row input {
+  width: 20px;
+  min-height: 20px;
+  accent-color: var(--danger);
+}
+
+.compact-links {
+  margin-top: 12px;
+  max-height: 260px;
+  overflow-y: auto;
+  padding-right: 4px;
 }
 
 .checkin-card {

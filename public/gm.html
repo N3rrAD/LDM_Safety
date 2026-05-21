@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Game Master Map</title>
+    <link rel="stylesheet" href="/styles.css">
+  </head>
+  <body>
+    <main class="gm-shell">
+      <section class="gm-hero">
+        <div>
+          <p class="eyebrow">Game Master</p>
+          <h1 id="gmName">Loading...</h1>
+        </div>
+        <span id="cat1Badge" class="mode-badge">Checking</span>
+      </section>
+
+      <section class="gm-map-card">
+        <div class="section-head">
+          <div>
+            <p class="eyebrow">Active game map</p>
+            <h2 id="mapTitle">Loading map</h2>
+          </div>
+          <span id="mapUpdated">Waiting</span>
+        </div>
+        <a id="mapLink" class="gm-map-link" href="#" target="_blank" rel="noreferrer">
+          <img id="gameMapImage" alt="Active game map" class="hidden">
+          <div id="mapPlaceholder" class="map-placeholder">
+            <strong>Game Map</strong>
+            <span>The active map will appear here.</span>
+          </div>
+        </a>
+      </section>
+
+      <section class="checkin-card gm-tracking-card">
+        <p class="helper">Keep this page open on your phone to share your live Game Master location and receive map changes.</p>
+        <label class="note-field">
+          Optional note
+          <input id="gmNoteInput" type="text" maxlength="120" placeholder="e.g. Roaming, Station 2">
+        </label>
+        <button id="gmUpdateButton" class="primary-action">Restart Live Tracking</button>
+        <p id="gmStatusMessage" class="message"></p>
+        <p class="fineprint">If Cat 1 is switched on by admin, this page will change to the Cat 1 map automatically.</p>
+      </section>
+    </main>
+
+    <script src="/gm.js"></script>
+  </body>
+</html>
