@@ -170,7 +170,7 @@ function renderGameState(gameState) {
   cat1Toggle.checked = Boolean(gameState.cat1Active);
   normalMapInput.value = gameState.normalMapUrl || "";
   cat1MapInput.value = gameState.cat1MapUrl || "";
-  gameStateUpdated.textContent = `${gameState.cat1Active ? "Cat 1 active" : "Normal mode"} · ${timeAgo(gameState.updatedAt)}`;
+  gameStateUpdated.textContent = `${gameState.cat1Active ? "Cat 1 active" : "Normal mode"} - ${timeAgo(gameState.updatedAt)}`;
 }
 
 function renderGameMasters(gameMasters) {
@@ -512,9 +512,8 @@ aedList.addEventListener("click", async event => {
   }
 });
 
-gameStateForm?.addEventListener("submit", async event => {
-  event.preventDefault();
-  gameStateMessage.textContent = "Saving game map mode...";
+async function saveGameState(message = "Saving game map mode...") {
+  gameStateMessage.textContent = message;
   gameStateMessage.className = "message";
   const response = await fetch("/api/game-state", {
     method: "POST",
@@ -532,8 +531,17 @@ gameStateForm?.addEventListener("submit", async event => {
     return;
   }
   renderGameState(data.gameState);
-  gameStateMessage.textContent = "Game Master phones will switch automatically.";
+  gameStateMessage.textContent = "Game Master phones are switching now.";
   gameStateMessage.className = "message success";
+}
+
+gameStateForm?.addEventListener("submit", async event => {
+  event.preventDefault();
+  await saveGameState();
+});
+
+cat1Toggle?.addEventListener("change", async () => {
+  await saveGameState(cat1Toggle.checked ? "Switching Game Masters to Cat 1..." : "Switching Game Masters to normal map...");
 });
 
 notifyButton.addEventListener("click", async () => {
@@ -548,3 +556,4 @@ notifyButton.addEventListener("click", async () => {
 if (token()) {
   showDashboard();
 }
+

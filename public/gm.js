@@ -10,7 +10,7 @@ const gmNoteInput = document.querySelector("#gmNoteInput");
 const gmUpdateButton = document.querySelector("#gmUpdateButton");
 const gmStatusMessage = document.querySelector("#gmStatusMessage");
 const gmLiveIntervalMs = 30000;
-const gmStateIntervalMs = 15000;
+const gmStateIntervalMs = 2000;
 let gmWatchId = null;
 let gmRetryTimer = null;
 let gmStateTimer = null;
@@ -19,6 +19,7 @@ let gmMap = null;
 let gmKmlLayer = null;
 let gmUserMarker = null;
 let activeMapUrl = "";
+let activeStateSignature = "";
 
 function setGmStatus(message, tone = "") {
   gmStatusMessage.textContent = message;
@@ -77,10 +78,16 @@ function updateGmUserMarker(position) {
   }
 }
 
-function loadKmlMap(mapUrl) {
+function versionedMapUrl(mapUrl, updatedAt) {
+  if (!updatedAt) return mapUrl;
+  return `${mapUrl}${mapUrl.includes("?") ? "&" : "?"}v=${encodeURIComponent(updatedAt)}`;
+}
+
+function loadKmlMap(mapUrl, updatedAt) {
   ensureGmMap();
-  if (!mapUrl || mapUrl === activeMapUrl) return;
-  activeMapUrl = mapUrl;
+  const nextMapUrl = versionedMapUrl(mapUrl, updatedAt);
+  if (!mapUrl || nextMapUrl === activeMapUrl) return;
+  activeMapUrl = nextMapUrl;
   mapPlaceholder.classList.remove("hidden");
   mapPlaceholder.querySelector("strong").textContent = "Loading map";
   mapPlaceholder.querySelector("span").textContent = "Opening the active KML game map...";
@@ -90,7 +97,7 @@ function loadKmlMap(mapUrl) {
     gmKmlLayer = null;
   }
 
-  gmKmlLayer = omnivore.kml(mapUrl)
+  gmKmlLayer = omnivore.kml(nextMapUrl)
     .on("ready", () => {
       mapPlaceholder.classList.add("hidden");
       const bounds = gmKmlLayer.getBounds();
@@ -111,6 +118,9 @@ function loadKmlMap(mapUrl) {
 function renderGameState(gameState) {
   const isCat1 = Boolean(gameState.cat1Active);
   const mapUrl = isCat1 ? gameState.cat1MapUrl : gameState.normalMapUrl;
+  const nextSignature = `${isCat1}|${gameState.normalMapUrl}|${gameState.cat1MapUrl}|${gameState.updatedAt}`;
+  if (nextSignature === activeStateSignature) return;
+  activeStateSignature = nextSignature;
   cat1Badge.textContent = isCat1 ? "CAT 1" : "Normal";
   cat1Badge.classList.toggle("cat1", isCat1);
   mapTitle.textContent = isCat1 ? "Cat 1 Map" : "Normal Game Map";
@@ -119,7 +129,7 @@ function renderGameState(gameState) {
   if (mapUrl) {
     mapLink.href = mapUrl;
     mapLink.classList.remove("hidden");
-    loadKmlMap(mapUrl);
+    loadKmlMap(mapUrl, gameState.updatedAt);
   } else {
     mapPlaceholder.classList.remove("hidden");
     mapPlaceholder.querySelector("strong").textContent = isCat1 ? "Cat 1 Holding Map" : "Normal Game Map";
@@ -132,7 +142,7 @@ function renderGameState(gameState) {
 }
 
 async function loadGameMaster() {
-  const response = await fetch(`/api/game-master/me?token=${encodeURIComponent(gmToken)}`);
+  const response = await fetch(`/api/game-master/me?token=${encodeURIComponent(gmToken)}`, { cache: "no-store" });
   const data = await response.json();
   if (!response.ok) throw new Error(data.error || "This Game Master link is not active.");
   gmName.textContent = data.name;

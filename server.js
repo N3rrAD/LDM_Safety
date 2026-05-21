@@ -65,13 +65,21 @@ function createStarterTeam() {
 }
 
 function createStarterGameMasters() {
-  return [
-    { id: "gm-1", name: "Game Master 1" },
-    { id: "gm-2", name: "Game Master 2" },
-    { id: "gm-3", name: "Game Master 3" }
-  ].map(master => ({
+  return Array.from({ length: 13 }, (_, index) => ({
+    id: `gm-${index + 1}`,
+    name: `Game Master ${index + 1}`
+  })).map(master => ({
     ...master,
     token: crypto.randomBytes(18).toString("hex")
+  }));
+}
+
+function reconcileGameMasters(existing = []) {
+  const starter = createStarterGameMasters();
+  const byId = new Map(existing.map(master => [master.id, master]));
+  return starter.map(master => ({
+    ...master,
+    ...(byId.get(master.id) || {})
   }));
 }
 
@@ -116,6 +124,11 @@ async function ensureDataFiles() {
   } catch {
     await writeJson(GAME_MASTERS_FILE, createStarterGameMasters());
   }
+  const gameMasters = await readJson(GAME_MASTERS_FILE, []);
+  const reconciledGameMasters = reconcileGameMasters(gameMasters);
+  if (JSON.stringify(gameMasters) !== JSON.stringify(reconciledGameMasters)) {
+    await writeJson(GAME_MASTERS_FILE, reconciledGameMasters);
+  }
   try {
     await fs.access(GAME_MASTER_LOCATIONS_FILE);
   } catch {
@@ -141,8 +154,14 @@ async function ensureRemoteData() {
   if (!(await readStore("aeds", null))) {
     await writeStore("aeds", await readJson(AED_FILE, []));
   }
-  if (!(await readStore("gameMasters", null))) {
+  const existingGameMasters = await readStore("gameMasters", null);
+  if (!existingGameMasters) {
     await writeStore("gameMasters", await readJson(GAME_MASTERS_FILE, createStarterGameMasters()));
+  } else {
+    const reconciledGameMasters = reconcileGameMasters(existingGameMasters);
+    if (JSON.stringify(existingGameMasters) !== JSON.stringify(reconciledGameMasters)) {
+      await writeStore("gameMasters", reconciledGameMasters);
+    }
   }
   if (!(await readStore("gameMasterLocations", null))) {
     await writeStore("gameMasterLocations", { latest: {}, history: [] });
